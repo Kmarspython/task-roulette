@@ -38,20 +38,14 @@ python -m http.server 8934
 ```
 then open http://localhost:8934
 
-## Putting it on your iPhone
+## Live URL
 
-This is a static site — deploy the whole `TaskManager` folder to any free static host, then
-add it to your iPhone home screen.
+Deployed via GitHub Pages from this repo (`Kmarspython/task-roulette`, `main` branch):
 
-**Easiest: Netlify Drop**
-1. On your computer, go to https://app.netlify.com/drop
-2. Drag the entire `TaskManager` folder onto the page
-3. You'll get a live `https://<random-name>.netlify.app` URL immediately
-4. (Optional) create a free Netlify account to claim the site so it doesn't expire and so
-   you can re-drag the folder later to push updates
+**https://kmarspython.github.io/task-roulette/**
 
 **On your iPhone:**
-1. Open the URL in **Safari** (must be Safari, not Chrome, for Add to Home Screen to make a
+1. Open that URL in **Safari** (must be Safari, not Chrome, for Add to Home Screen to make a
    full standalone app)
 2. Tap the Share icon → **Add to Home Screen**
 3. Launch it from the home screen icon — it opens full-screen like a native app and keeps
@@ -59,7 +53,14 @@ add it to your iPhone home screen.
 
 ## Updating later
 
-If you ask Claude to change the app, redeploy by dragging the updated `TaskManager` folder
-into the same Netlify site again (Site settings → deploys → drag & drop), then reopen the
-app on your phone (pull down to refresh once if it doesn't pick up the change immediately —
-the service worker caches assets).
+Push changes to the `main` branch and GitHub Pages redeploys automatically within a minute
+or two:
+
+```
+git add -A
+git commit -m "describe the change"
+git push
+```
+
+Then reopen the app on your phone (pull down to refresh once if it doesn't pick up the
+change immediately — the service worker caches assets).
