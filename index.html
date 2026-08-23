@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>Task Roulette</title>
+
+<!-- PWA / iOS home screen setup -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#5a46dc" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Task Roulette" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<link rel="icon" href="icons/icon-192.png" />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <header class="topbar">
+    <h1 id="topbarTitle">Today</h1>
+    <button id="settingsBtn" class="icon-btn" aria-label="Settings" title="Backup / Restore">⚙️</button>
+  </header>
+
+  <main id="views">
+
+    <!-- TODAY VIEW -->
+    <section id="view-today" class="view">
+      <div id="todayEmpty" class="empty-state hidden">
+        <div class="empty-emoji">🗒️</div>
+        <p>No tasks yet.</p>
+        <p class="muted">Add a recurring or one-off task to get started.</p>
+        <button class="primary-btn" data-goto="tasks">Add a Task</button>
+      </div>
+
+      <div id="todayAllCooldown" class="empty-state hidden">
+        <div class="empty-emoji">😴</div>
+        <p>Everything's on cooldown right now.</p>
+        <p class="muted" id="todayAllCooldownDetail"></p>
+      </div>
+
+      <div id="todayCard" class="task-card hidden">
+        <div class="task-card-type" id="todayType">Recurring</div>
+        <h2 id="todayName">Task name</h2>
+        <p id="todayNotes" class="task-notes"></p>
+        <div class="task-meta">
+          <span id="todayDuration" class="pill">⏱ 30 min</span>
+        </div>
+
+        <div class="today-actions">
+          <button id="rerollBtn" class="secondary-btn">🎲 Different Task</button>
+          <button id="completeBtn" class="primary-btn">✓ Mark Complete</button>
+        </div>
+        <button id="skipBtn" class="text-btn">Skip for today</button>
+      </div>
+
+      <div id="todayDoneCard" class="task-card done-card hidden">
+        <div class="empty-emoji">🎉</div>
+        <h2>Nice work!</h2>
+        <p class="muted" id="doneSummary"></p>
+        <button id="anotherBtn" class="primary-btn">Pick Another Task</button>
+      </div>
+
+      <div id="todayCompletedList" class="completed-today hidden">
+        <h3>Completed today</h3>
+        <ul id="completedTodayList"></ul>
+      </div>
+    </section>
+
+    <!-- TASKS VIEW -->
+    <section id="view-tasks" class="view hidden">
+      <div class="view-header-row">
+        <div class="segmented" id="taskFilterSeg">
+          <button class="seg-btn active" data-filter="all">All</button>
+          <button class="seg-btn" data-filter="recurring">Recurring</button>
+          <button class="seg-btn" data-filter="oneoff">One-off</button>
+        </div>
+      </div>
+      <ul id="taskList" class="task-list"></ul>
+      <div id="taskListEmpty" class="empty-state hidden">
+        <div class="empty-emoji">📋</div>
+        <p>No tasks in this list.</p>
+      </div>
+      <button id="fabAdd" class="fab" aria-label="Add task">+</button>
+    </section>
+
+    <!-- HISTORY VIEW -->
+    <section id="view-history" class="view hidden">
+      <div id="historyEmpty" class="empty-state hidden">
+        <div class="empty-emoji">📜</div>
+        <p>No history yet.</p>
+        <p class="muted">Completed tasks will show up here.</p>
+      </div>
+      <div id="historyList"></div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-view="today">
+      <span class="tab-icon">🎯</span><span>Today</span>
+    </button>
+    <button class="tab-btn" data-view="tasks">
+      <span class="tab-icon">📋</span><span>Tasks</span>
+    </button>
+    <button class="tab-btn" data-view="history">
+      <span class="tab-icon">📜</span><span>History</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ADD / EDIT TASK MODAL -->
+<div id="taskModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <button id="taskModalCancel" class="text-btn">Cancel</button>
+      <h3 id="taskModalTitle">New Task</h3>
+      <button id="taskModalSave" class="text-btn strong">Save</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Name</label>
+      <input id="fName" type="text" placeholder="e.g. Vacuum living room" maxlength="80" />
+
+      <label class="field-label">Notes (optional)</label>
+      <textarea id="fNotes" placeholder="Any details..." maxlength="300"></textarea>
+
+      <label class="field-label">Type</label>
+      <div class="segmented" id="typeSeg">
+        <button class="seg-btn active" data-type="recurring">Recurring</button>
+        <button class="seg-btn" data-type="oneoff">One-off</button>
+      </div>
+
+      <div id="recurringFields">
+        <label class="field-label">Estimated time range (minutes)</label>
+        <div class="row-2">
+          <input id="fTimeMin" type="number" min="1" max="600" value="15" />
+          <span class="row-sep">to</span>
+          <input id="fTimeMax" type="number" min="1" max="600" value="30" />
+        </div>
+
+        <label class="field-label">Cooldown — won't be suggested again for</label>
+        <div class="row-inline">
+          <input id="fCooldown" type="number" min="0" max="365" value="3" />
+          <span>days after completing</span>
+        </div>
+
+        <label class="field-label">Cooling-off — less likely to be picked for</label>
+        <div class="row-inline">
+          <input id="fCooling" type="number" min="0" max="365" value="7" />
+          <span>more days after that</span>
+        </div>
+      </div>
+
+      <div id="oneoffFields" class="hidden">
+        <label class="field-label">Estimated time range (minutes, optional)</label>
+        <div class="row-2">
+          <input id="fTimeMinOne" type="number" min="1" max="600" placeholder="min" />
+          <span class="row-sep">to</span>
+          <input id="fTimeMaxOne" type="number" min="1" max="600" placeholder="max" />
+        </div>
+      </div>
+
+      <button id="deleteTaskBtn" class="danger-btn hidden">Delete Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <button id="settingsClose" class="text-btn">Close</button>
+      <h3>Backup &amp; Restore</h3>
+      <span style="width:52px"></span>
+    </div>
+    <div class="modal-body">
+      <p class="muted">Your data lives only on this device's browser storage. Export a backup now and then so you never lose your list or history.</p>
+      <button id="exportBtn" class="primary-btn">Export Backup (.json)</button>
+      <label class="field-label" style="margin-top:20px">Restore from backup</label>
+      <input id="importFile" type="file" accept="application/json" />
+      <button id="importBtn" class="secondary-btn">Import Backup</button>
+
+      <hr class="divider" />
+      <p class="muted">Random pick tuning</p>
+      <label class="field-label">Minimum likelihood during cooling-off</label>
+      <div class="row-inline">
+        <input id="fMinWeight" type="number" min="1" max="100" value="15" />
+        <span>% of normal chance</span>
+      </div>
+      <button id="saveTuningBtn" class="secondary-btn">Save</button>
+
+      <hr class="divider" />
+      <button id="wipeBtn" class="danger-btn">Erase All Data</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
