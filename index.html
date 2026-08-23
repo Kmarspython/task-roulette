@@ -135,11 +135,16 @@
       </div>
 
       <div id="recurringFields">
-        <label class="field-label">Estimated time range (minutes)</label>
-        <div class="row-2">
-          <input id="fTimeMin" type="number" min="1" max="600" value="15" />
+        <label class="field-label">Time</label>
+        <div class="segmented" id="recurTimeModeSeg">
+          <button class="seg-btn active" data-mode="range">Time range</button>
+          <button class="seg-btn" data-mode="untilDone">Until done</button>
+        </div>
+
+        <div id="recurRangeRow" class="row-2 select-row">
+          <select id="fTimeMin"></select>
           <span class="row-sep">to</span>
-          <input id="fTimeMax" type="number" min="1" max="600" value="30" />
+          <select id="fTimeMax"></select>
         </div>
 
         <label class="field-label">Cooldown — won't be suggested again for</label>
@@ -156,11 +161,17 @@
       </div>
 
       <div id="oneoffFields" class="hidden">
-        <label class="field-label">Estimated time range (minutes, optional)</label>
-        <div class="row-2">
-          <input id="fTimeMinOne" type="number" min="1" max="600" placeholder="min" />
+        <label class="field-label">Time</label>
+        <div class="segmented" id="oneoffTimeModeSeg">
+          <button class="seg-btn active" data-mode="none">No estimate</button>
+          <button class="seg-btn" data-mode="range">Time range</button>
+          <button class="seg-btn" data-mode="untilDone">Until done</button>
+        </div>
+
+        <div id="oneoffRangeRow" class="row-2 select-row hidden">
+          <select id="fTimeMinOne"></select>
           <span class="row-sep">to</span>
-          <input id="fTimeMaxOne" type="number" min="1" max="600" placeholder="max" />
+          <select id="fTimeMaxOne"></select>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'task-roulette-v1';
+const CACHE_NAME = 'task-roulette-v2';
 const ASSETS = [
   './',
   './index.html',

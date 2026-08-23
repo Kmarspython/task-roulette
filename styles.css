@@ -357,7 +357,7 @@ html, body {
 }
 .field-label:first-child { margin-top: 0; }
 
-input[type="text"], input[type="number"], input[type="file"], textarea {
+input[type="text"], input[type="number"], input[type="file"], textarea, select {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -368,6 +368,8 @@ input[type="text"], input[type="number"], input[type="file"], textarea {
   font-family: inherit;
 }
 textarea { min-height: 60px; resize: vertical; }
+select { appearance: none; -webkit-appearance: none; }
+.select-row { margin-top: 10px; }
 
 .row-2 { display: flex; align-items: center; gap: 10px; }
 .row-2 input { flex: 1; }

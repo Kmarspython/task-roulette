@@ -6,15 +6,16 @@ Xcode, App Store, or Apple Developer account needed.
 ## How the picking logic works
 
 - **Recurring tasks** (e.g. vacuum, clean bathroom): when you add one, you set
-  - a time range in minutes (e.g. 15–30) — the app rolls a random duration in that range
-    each time the task is picked
+  - a **time**: either a time range (pick two values, 30 min–3 hr in 30 min steps — the app
+    rolls a random duration in that range each time the task is picked), or **Until done**
+    for tasks with no fixed duration
   - a **cooldown**: days after completing it during which it can't be picked at all
   - a **cooling-off** period: extra days after the cooldown where it *can* be picked but
     is less likely to (its odds ramp linearly from a low starting chance back up to normal
     by the end of the cooling-off window)
 - **One-off tasks** (e.g. clean the pantry, fix the dog door): picked like any other task,
   but once you mark one complete it's removed from the list for good (it still stays in
-  History).
+  History). Time can be set to No estimate, a time range, or Until done, same as recurring.
 - Each day the app auto-picks one task for you, weighted by the above. Buttons let you:
   - **🎲 Different Task** — reroll before doing it
   - **✓ Mark Complete** — logs it to History; recurring tasks restart their cooldown,

@@ -106,6 +106,7 @@
   }
 
   function generateDuration(task) {
+    if (task.untilDone) return null;
     const min = task.timeMin, max = task.timeMax;
     if (min == null || max == null || min === '' || max === '') return null;
     return randInt(Number(min), Number(max));
@@ -143,6 +144,7 @@
       notes: task.notes || '',
       type: task.type,
       duration: generateDuration(task),
+      untilDone: !!task.untilDone,
       status: 'pending',
     };
     if (excludeCurrent) {
@@ -168,6 +170,7 @@
       taskName: pick.taskName,
       type: pick.type,
       duration: pick.duration,
+      untilDone: pick.untilDone,
       date: state.today.date,
       completedAt: pick.completedAt,
     };
@@ -201,6 +204,22 @@
     if (min < 60) return `${min} min`;
     const h = Math.floor(min / 60), m = min % 60;
     return m ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  // Label for a pick or history entry (has .duration / .untilDone)
+  function pickDurationLabel(entry) {
+    if (entry.untilDone) return 'Until done';
+    if (entry.duration != null) return fmtDuration(entry.duration);
+    return null;
+  }
+
+  // Label for a task's configured time range, shown in the task list
+  function taskDurationLabel(task) {
+    if (task.untilDone) return 'Until done';
+    if (task.timeMin != null && task.timeMax != null && task.timeMin !== '' && task.timeMax !== '') {
+      return `${fmtDuration(Number(task.timeMin))}–${fmtDuration(Number(task.timeMax))}`;
+    }
+    return task.type === 'oneoff' ? 'No estimate' : '';
   }
 
   function renderToday() {
@@ -238,7 +257,8 @@
 
     if (pick.status === 'completed') {
       $('#todayDoneCard').classList.remove('hidden');
-      const durTxt = pick.duration != null ? ` (${fmtDuration(pick.duration)})` : '';
+      const durLabel = pickDurationLabel(pick);
+      const durTxt = durLabel ? ` (${durLabel})` : '';
       $('#doneSummary').textContent = `You completed "${pick.taskName}"${durTxt}. Want to do more?`;
       renderCompletedToday();
       return;
@@ -250,8 +270,9 @@
     $('#todayName').textContent = pick.taskName;
     $('#todayNotes').textContent = pick.notes || '';
     $('#todayNotes').classList.toggle('hidden', !pick.notes);
-    if (pick.duration != null) {
-      $('#todayDuration').textContent = `⏱ ${fmtDuration(pick.duration)}`;
+    const durLabel = pickDurationLabel(pick);
+    if (durLabel) {
+      $('#todayDuration').textContent = `⏱ ${durLabel}`;
       $('#todayDuration').classList.remove('hidden');
     } else {
       $('#todayDuration').classList.add('hidden');
@@ -271,7 +292,7 @@
     }
     wrap.classList.remove('hidden');
     list.innerHTML = completed.map(p => `
-      <li><span>${escapeHtml(p.taskName)}</span><span class="muted">${p.duration != null ? fmtDuration(p.duration) : ''}</span></li>
+      <li><span>${escapeHtml(p.taskName)}</span><span class="muted">${pickDurationLabel(p) || ''}</span></li>
     `).join('');
   }
 
@@ -289,9 +310,7 @@
     $('#taskListEmpty').classList.toggle('hidden', list.length > 0);
     container.innerHTML = list.map(t => {
       const a = statusInfoForList(t);
-      const durTxt = t.timeMin != null && t.timeMax != null && t.timeMin !== '' && t.timeMax !== ''
-        ? `${t.timeMin}–${t.timeMax} min`
-        : (t.type === 'oneoff' ? 'No estimate' : '');
+      const durTxt = taskDurationLabel(t);
       const sub = [t.type === 'recurring' ? `Cooldown ${t.cooldownDays}d, cooling ${t.coolingDays}d` : 'One-off', durTxt]
         .filter(Boolean).join(' · ');
       return `
@@ -329,7 +348,7 @@
                 <div class="history-item-name">${escapeHtml(h.taskName)}</div>
                 <div class="history-item-badge">${h.type === 'recurring' ? 'Recurring' : 'One-off'}</div>
               </div>
-              <div class="history-item-time">${h.duration != null ? fmtDuration(h.duration) : ''}</div>
+              <div class="history-item-time">${pickDurationLabel(h) || ''}</div>
             </div>
           `).join('')}
         </div>
@@ -414,6 +433,24 @@
 
   let editingId = null;
 
+  const DURATION_OPTIONS = [30, 60, 90, 120, 150, 180]; // minutes, 30min steps up to 3hr
+
+  function populateDurationSelect(select) {
+    select.innerHTML = DURATION_OPTIONS.map(m => `<option value="${m}">${fmtDuration(m)}</option>`).join('');
+  }
+
+  // Sets a duration <select>'s value, adding a one-off option first if the
+  // existing task value doesn't fall on one of the standard 30min steps.
+  function setDurationSelectValue(select, value) {
+    if (value != null && value !== '' && !DURATION_OPTIONS.includes(Number(value))) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = `${fmtDuration(Number(value))} (custom)`;
+      select.insertBefore(opt, select.firstChild);
+    }
+    select.value = value;
+  }
+
   function openTaskModal(id) {
     editingId = id;
     const task = id ? state.tasks.find(t => t.id === id) : null;
@@ -427,13 +464,20 @@
     const type = task ? task.type : 'recurring';
     setModalType(type);
 
-    $('#fTimeMin').value = task && task.type === 'recurring' ? (task.timeMin ?? 15) : 15;
-    $('#fTimeMax').value = task && task.type === 'recurring' ? (task.timeMax ?? 30) : 30;
+    const recurMode = task && task.type === 'recurring' && task.untilDone ? 'untilDone' : 'range';
+    setRecurTimeMode(recurMode);
+    setDurationSelectValue($('#fTimeMin'), task && task.type === 'recurring' && task.timeMin != null ? task.timeMin : 30);
+    setDurationSelectValue($('#fTimeMax'), task && task.type === 'recurring' && task.timeMax != null ? task.timeMax : 60);
     $('#fCooldown').value = task ? (task.cooldownDays ?? 3) : 3;
     $('#fCooling').value = task ? (task.coolingDays ?? 7) : 7;
 
-    $('#fTimeMinOne').value = task && task.type === 'oneoff' && task.timeMin != null ? task.timeMin : '';
-    $('#fTimeMaxOne').value = task && task.type === 'oneoff' && task.timeMax != null ? task.timeMax : '';
+    let oneoffMode = 'none';
+    if (task && task.type === 'oneoff') {
+      oneoffMode = task.untilDone ? 'untilDone' : (task.timeMin != null ? 'range' : 'none');
+    }
+    setOneoffTimeMode(oneoffMode);
+    setDurationSelectValue($('#fTimeMinOne'), task && task.type === 'oneoff' && task.timeMin != null ? task.timeMin : 30);
+    setDurationSelectValue($('#fTimeMaxOne'), task && task.type === 'oneoff' && task.timeMax != null ? task.timeMax : 60);
 
     $('#taskModal').classList.remove('hidden');
   }
@@ -449,10 +493,32 @@
     $('#oneoffFields').classList.toggle('hidden', type !== 'oneoff');
   }
 
+  function setRecurTimeMode(mode) {
+    $$('#recurTimeModeSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    $('#recurRangeRow').classList.toggle('hidden', mode !== 'range');
+  }
+
+  function setOneoffTimeMode(mode) {
+    $$('#oneoffTimeModeSeg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    $('#oneoffRangeRow').classList.toggle('hidden', mode !== 'range');
+  }
+
   $('#typeSeg').addEventListener('click', e => {
     const btn = e.target.closest('.seg-btn');
     if (!btn) return;
     setModalType(btn.dataset.type);
+  });
+
+  $('#recurTimeModeSeg').addEventListener('click', e => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    setRecurTimeMode(btn.dataset.mode);
+  });
+
+  $('#oneoffTimeModeSeg').addEventListener('click', e => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    setOneoffTimeMode(btn.dataset.mode);
   });
 
   $('#taskModalCancel').addEventListener('click', closeTaskModal);
@@ -469,20 +535,34 @@
     };
 
     if (type === 'recurring') {
-      const min = Number($('#fTimeMin').value) || 1;
-      const max = Number($('#fTimeMax').value) || min;
-      payload.timeMin = Math.min(min, max);
-      payload.timeMax = Math.max(min, max);
+      const mode = $('#recurTimeModeSeg .seg-btn.active').dataset.mode;
+      if (mode === 'untilDone') {
+        payload.untilDone = true;
+        payload.timeMin = null;
+        payload.timeMax = null;
+      } else {
+        const min = Number($('#fTimeMin').value) || 30;
+        const max = Number($('#fTimeMax').value) || min;
+        payload.untilDone = false;
+        payload.timeMin = Math.min(min, max);
+        payload.timeMax = Math.max(min, max);
+      }
       payload.cooldownDays = Math.max(0, Number($('#fCooldown').value) || 0);
       payload.coolingDays = Math.max(0, Number($('#fCooling').value) || 0);
     } else {
-      const minRaw = $('#fTimeMinOne').value;
-      const maxRaw = $('#fTimeMaxOne').value;
-      if (minRaw !== '' && maxRaw !== '') {
-        const min = Number(minRaw), max = Number(maxRaw);
+      const mode = $('#oneoffTimeModeSeg .seg-btn.active').dataset.mode;
+      if (mode === 'untilDone') {
+        payload.untilDone = true;
+        payload.timeMin = null;
+        payload.timeMax = null;
+      } else if (mode === 'range') {
+        const min = Number($('#fTimeMinOne').value) || 30;
+        const max = Number($('#fTimeMaxOne').value) || min;
+        payload.untilDone = false;
         payload.timeMin = Math.min(min, max);
         payload.timeMax = Math.max(min, max);
       } else {
+        payload.untilDone = false;
         payload.timeMin = null;
         payload.timeMax = null;
       }
@@ -576,6 +656,11 @@
   }
 
   // ---------- init ----------
+
+  populateDurationSelect($('#fTimeMin'));
+  populateDurationSelect($('#fTimeMax'));
+  populateDurationSelect($('#fTimeMinOne'));
+  populateDurationSelect($('#fTimeMaxOne'));
 
   ensureTodayBucket();
   showView('today');
